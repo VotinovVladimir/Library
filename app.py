@@ -1,16 +1,35 @@
+
+import os
+
 from flask import Flask, render_template
 
-# 1. Создание Flask-приложения
-app = Flask(__name__)
+from database import db
+from models import Author, Book, Reader, Loan
 
 
-# 2. Маршрут /
-@app.route("/")
+app = Flask(__name__, instance_relative_config=True)
+
+# Создаём папку instance, если её нет
+os.makedirs(app.instance_path, exist_ok=True)
+
+# Настройки базы данных
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///library.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+# Подключаем базу данных к Flask
+db.init_app(app)
+
+
+# Главная страница
+@app.route('/')
 def index():
-    # 3. Отображение главной страницы
-    return render_template("index.html")
+    return render_template('index.html')
 
 
-# 4. Запуск локального сервера
-if __name__ == "__main__":
-    app.run(host="127.0.0.1", port=5001, debug=True)
+# Создание таблиц
+with app.app_context():
+    db.create_all()
+
+
+if __name__ == '__main__':
+    app.run(debug=True)
