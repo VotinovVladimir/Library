@@ -1,0 +1,99 @@
+
+{% extends 'base.html' %}
+
+{% if book %}
+    {% set page_title = 'Редактирование книги' %}
+{% else %}
+    {% set page_title = 'Добавление книги' %}
+{% endif %}
+
+{% block title %}{{ page_title }} — Библиотека{% endblock %}
+
+{% block content %}
+
+<div class="container">
+
+    <h2>{{ page_title }}</h2>
+
+    {% if not authors %}
+        <p>Сначала необходимо добавить автора.</p>
+    {% else %}
+
+        {% if book %}
+            <form method="POST" action="{{ url_for('edit_book', book_id=book.id) }}">
+        {% else %}
+            <form method="POST" action="{{ url_for('add_book') }}">
+        {% endif %}
+
+            <label for="title">Название книги *</label>
+            <input
+                type="text"
+                id="title"
+                name="title"
+                value="{{ form_data.get('title', '') if form_data else (book.title if book else '') }}"
+                required
+            >
+
+            <label for="author_id">Автор *</label>
+            <select
+                id="author_id"
+                name="author_id"
+                required
+                style="display:block; width:100%; padding:10px; margin:8px 0 18px;"
+            >
+                <option value="">Выберите автора</option>
+
+                {% for author in authors %}
+                    <option
+                        value="{{ author.id }}"
+                        {% if form_data and form_data.get('author_id') == author.id|string %}
+                            selected
+                        {% elif not form_data and book and book.author_id == author.id %}
+                            selected
+                        {% endif %}
+                    >
+                        {{ author.full_name }}
+                    </option>
+                {% endfor %}
+            </select>
+
+            <label for="isbn">ISBN</label>
+            <input
+                type="text"
+                id="isbn"
+                name="isbn"
+                value="{{ form_data.get('isbn', '') if form_data else (book.isbn if book and book.isbn else '') }}"
+            >
+
+            <label for="year">Год издания</label>
+            <input
+                type="number"
+                id="year"
+                name="year"
+                min="0"
+                value="{{ form_data.get('year', '') if form_data else (book.year if book and book.year else '') }}"
+            >
+
+            <label for="quantity">Количество экземпляров *</label>
+            <input
+                type="number"
+                id="quantity"
+                name="quantity"
+                min="1"
+                value="{{ form_data.get('quantity', '1') if form_data else (book.quantity if book else 1) }}"
+                required
+            >
+
+            <button type="submit">Сохранить</button>
+
+            <a href="{{ url_for('books') }}" class="button button-secondary">
+                Отмена
+            </a>
+
+        </form>
+
+    {% endif %}
+
+</div>
+
+{% endblock %}
