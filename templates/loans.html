@@ -1,0 +1,91 @@
+
+{% extends 'base.html' %}
+
+{% block title %}Выдачи книг — Библиотека{% endblock %}
+
+{% block content %}
+
+<div class="container">
+
+    <h2>Выдача и возврат книг</h2>
+
+    <a href="{{ url_for('add_loan') }}" class="button">
+        Выдать книгу
+    </a>
+
+    {% if loans %}
+
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Книга</th>
+                <th>Читатель</th>
+                <th>Дата выдачи</th>
+                <th>Вернуть до</th>
+                <th>Дата возврата</th>
+                <th>Статус</th>
+                <th>Действие</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            {% for loan in loans %}
+
+            <tr>
+                <td>{{ loan.id }}</td>
+                <td>{{ loan.book.title }}</td>
+                <td>{{ loan.reader.full_name }}</td>
+
+                <td>{{ loan.issue_date.strftime('%d.%m.%Y') }}</td>
+
+                <td>{{ loan.due_date.strftime('%d.%m.%Y') }}</td>
+
+                <td>
+                    {% if loan.return_date %}
+                        {{ loan.return_date.strftime('%d.%m.%Y') }}
+                    {% else %}
+                        —
+                    {% endif %}
+                </td>
+
+                <td>
+                    {% if loan.return_date %}
+                        <span class="success">Возвращена</span>
+                    {% elif loan.due_date < today %}
+                        <span class="error">Просрочена</span>
+                    {% else %}
+                        <span>На руках</span>
+                    {% endif %}
+                </td>
+
+                <td>
+                    {% if not loan.return_date %}
+                        <form
+                            action="{{ url_for('return_loan', loan_id=loan.id) }}"
+                            method="POST"
+                            onsubmit="return confirm('Зарегистрировать возврат книги?');"
+                        >
+                            <button type="submit">
+                                Вернуть
+                            </button>
+                        </form>
+                    {% else %}
+                        —
+                    {% endif %}
+                </td>
+            </tr>
+
+            {% endfor %}
+        </tbody>
+    </table>
+
+    {% else %}
+
+        <p>Выдач пока нет.</p>
+
+    {% endif %}
+
+</div>
+
+{% endblock %}

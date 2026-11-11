@@ -1,6 +1,8 @@
 
 import os
 
+from datetime import date, timedelta
+
 from flask import Flask, render_template, request, redirect, url_for, flash
 
 from database import db
@@ -290,6 +292,134 @@ def delete_book(book_id):
     flash('Книга удалена.', 'success')
     return redirect(url_for('books'))
 
+
+# Список выдач и история возвратов
+@app.route('/loans')
+def loans():
+    all_loans = Loan.query.order_by(
+        Loan.issue_date.desc(),
+        Loan.id.desc()
+    ).all()
+
+    today = date.today()
+
+    return render_template(
+        'loans.html',
+        loans=all_loans,
+        today=today
+    )
+
+
+# Выдача книги
+@app.route('/loans/add', methods=['GET', 'POST'])
+def add_loan():
+    readers_list = Reader.query.order_by(Reader.full_name).all()
+    books_list = Book.query.order_by(Book.title).all()
+
+    today = date.today()
+    default_due_date = today + timedelta(days=14)
+
+    if request.method == 'POST':
+        try:
+            reader_id = int(request.form.get('reader_id', ''))
+            book_id = int(request.form.get('book_id', ''))
+            due_date = date.fromisoformat(
+                request.form.get('due_date', '')
+            )
+        except (ValueError, TypeError):
+            flash('Проверьте выбранного читателя, книгу и дату возврата.', 'error')
+            return render_template(
+                'loan_form.html',
+                readers=readers_list,
+                books=books_list,
+                default_due_date=default_due_date,
+                today=today,
+                form_data=request.form
+            )
+
+        reader = db.session.get(Reader, reader_id)
+        book = db.session.get(Book, book_id)
+
+        if reader is None:
+            flash('Выбранный читатель не найден.', 'error')
+
+        elif book is None:
+            flash('Выбранная книга не найдена.', 'error')
+
+        elif due_date < today:
+            flash('Дата возврата не может быть в прошлом.', 'error')
+
+        else:
+            active_loans = Loan.query.filter_by(
+                book_id=book.id,
+                return_date=None
+            ).count()
+
+            available = book.quantity - active_loans
+
+            if available <= 0:
+                flash('Нет свободных экземпляров этой книги.', 'error')
+
+            else:
+                # Проверяем, есть ли у читателя эта книга на руках
+                existing_loan = Loan.query.filter_by(
+                    book_id=book.id,
+                    reader_id=reader.id,
+                    return_date=None
+                ).first()
+
+                if existing_loan:
+                    flash(
+                        'Этот читатель уже имеет данный экземпляр книги на руках.',
+                        'error'
+                    )
+                else:
+                    loan = Loan(
+                        book_id=book.id,
+                        reader_id=reader.id,
+                        issue_date=today,
+                        due_date=due_date
+                    )
+
+                    db.session.add(loan)
+                    db.session.commit()
+
+                    flash('Книга успешно выдана читателю.', 'success')
+                    return redirect(url_for('loans'))
+
+        return render_template(
+            'loan_form.html',
+            readers=readers_list,
+            books=books_list,
+            default_due_date=default_due_date,
+            today=today,
+            form_data=request.form
+        )
+
+    return render_template(
+        'loan_form.html',
+        readers=readers_list,
+        books=books_list,
+        default_due_date=default_due_date,
+        today=today,
+        form_data=None
+    )
+
+
+# Возврат книги
+@app.route('/loans/return/<int:loan_id>', methods=['POST'])
+def return_loan(loan_id):
+    loan = db.get_or_404(Loan, loan_id)
+
+    if loan.return_date is not None:
+        flash('Эта книга уже была возвращена.', 'error')
+    else:
+        loan.return_date = date.today()
+        db.session.commit()
+
+        flash('Возврат книги успешно зарегистрирован.', 'success')
+
+    return redirect(url_for('loans'))
 
 
 # Создание таблиц

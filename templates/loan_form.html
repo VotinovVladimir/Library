@@ -1,0 +1,104 @@
+
+{% extends 'base.html' %}
+
+{% block title %}Выдача книги — Библиотека{% endblock %}
+
+{% block content %}
+
+<div class="container">
+
+    <h2>Выдача книги</h2>
+
+    {% if not readers %}
+        <p>Сначала необходимо добавить читателя.</p>
+
+    {% elif not books %}
+        <p>В каталоге пока нет книг.</p>
+
+    {% else %}
+
+        <form method="POST" action="{{ url_for('add_loan') }}">
+
+            <label for="reader_id">Читатель *</label>
+
+            <select
+                id="reader_id"
+                name="reader_id"
+                required
+                style="display:block; width:100%; padding:10px; margin:8px 0 18px;"
+            >
+                <option value="">Выберите читателя</option>
+
+                {% for reader in readers %}
+                    <option
+                        value="{{ reader.id }}"
+                        {% if form_data and form_data.get('reader_id') == reader.id|string %}
+                            selected
+                        {% endif %}
+                    >
+                        {{ reader.full_name }}
+                    </option>
+                {% endfor %}
+
+            </select>
+
+
+            <label for="book_id">Книга *</label>
+
+            <select
+                id="book_id"
+                name="book_id"
+                required
+                style="display:block; width:100%; padding:10px; margin:8px 0 18px;"
+            >
+                <option value="">Выберите книгу</option>
+
+                {% for book in books %}
+
+                    {% set issued = book.loans | selectattr('return_date', 'none') | list | length %}
+                    {% set available = book.quantity - issued %}
+
+                    <option
+                        value="{{ book.id }}"
+                        {% if form_data and form_data.get('book_id') == book.id|string %}
+                            selected
+                        {% endif %}
+                        {% if available <= 0 %}
+                            disabled
+                        {% endif %}
+                    >
+                        {{ book.title }} — {{ book.author.full_name }}
+                        (свободно: {{ available }})
+                    </option>
+
+                {% endfor %}
+
+            </select>
+
+
+            <label for="due_date">Дата возврата *</label>
+
+            <input
+                type="date"
+                id="due_date"
+                name="due_date"
+                value="{{ form_data.get('due_date', default_due_date.isoformat()) if form_data else default_due_date.isoformat() }}"
+                min="{{ today.isoformat() if today is defined else '' }}"
+                required
+            >
+
+            <p>По умолчанию срок возврата составляет 14 дней.</p>
+
+            <button type="submit">Оформить выдачу</button>
+
+            <a href="{{ url_for('loans') }}" class="button button-secondary">
+                Отмена
+            </a>
+
+        </form>
+
+    {% endif %}
+
+</div>
+
+{% endblock %}
