@@ -1,10 +1,240 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <title>Главная</title>
-</head>
-<body>
-    <h1>Привет! Это главная страница Flask-приложения.</h1>
-</body>
-</html>
+
+{% extends 'base.html' %}
+
+{% block title %}Главная — Библиотека{% endblock %}
+
+{% block content %}
+
+<!-- Приветственный блок -->
+
+<section class="dashboard-hero">
+
+    <div class="eyebrow">ПАНЕЛЬ УПРАВЛЕНИЯ</div>
+
+    <h2>Добро пожаловать в библиотеку</h2>
+
+    <p>
+        Управляйте книжным фондом, читателями и выдачей книг
+        в одном месте.
+    </p>
+
+    <p>
+        Сегодня: {{ today.strftime('%d.%m.%Y') }}
+    </p>
+
+</section>
+
+
+<!-- Статистика -->
+
+<div class="stats-grid">
+
+    <div class="stat-card accent-blue">
+        <div class="stat-label">Наименований книг</div>
+        <span class="stat-value">{{ total_books }}</span>
+        <div class="stat-note">В каталоге библиотеки</div>
+    </div>
+
+    <div class="stat-card accent-blue">
+        <div class="stat-label">Всего экземпляров</div>
+        <span class="stat-value">{{ total_copies }}</span>
+        <div class="stat-note">Общий книжный фонд</div>
+    </div>
+
+    <div class="stat-card accent-green">
+        <div class="stat-label">Свободно</div>
+        <span class="stat-value">{{ available_copies }}</span>
+        <div class="stat-note">Доступно для выдачи</div>
+    </div>
+
+    <div class="stat-card accent-gold">
+        <div class="stat-label">На руках</div>
+        <span class="stat-value">{{ issued_copies }}</span>
+        <div class="stat-note">Выдано читателям</div>
+    </div>
+
+    <div class="stat-card accent-blue">
+        <div class="stat-label">Читателей</div>
+        <span class="stat-value">{{ total_readers }}</span>
+        <div class="stat-note">Зарегистрировано в системе</div>
+    </div>
+
+    <div class="stat-card accent-red">
+        <div class="stat-label">Просрочено</div>
+        <span class="stat-value">{{ overdue_count }}</span>
+        <div class="stat-note">Требуют возврата</div>
+    </div>
+
+</div>
+
+
+<!-- Быстрые действия -->
+
+<h3>Быстрые действия</h3>
+
+<div class="quick-actions">
+
+    <a href="{{ url_for('add_book') }}" class="action-card">
+        <div class="action-icon">📖</div>
+        <div>
+            <strong>Добавить книгу</strong>
+            <small>Пополнить книжный каталог</small>
+        </div>
+    </a>
+
+    <a href="{{ url_for('add_reader') }}" class="action-card">
+        <div class="action-icon">👤</div>
+        <div>
+            <strong>Добавить читателя</strong>
+            <small>Зарегистрировать нового читателя</small>
+        </div>
+    </a>
+
+    <a href="{{ url_for('add_loan') }}" class="action-card">
+        <div class="action-icon">↗</div>
+        <div>
+            <strong>Выдать книгу</strong>
+            <small>Оформить новую выдачу</small>
+        </div>
+    </a>
+
+</div>
+
+
+<!-- Рабочие панели -->
+
+<div class="dashboard-columns">
+
+    <!-- Последние выдачи -->
+
+    <section class="dashboard-panel">
+
+        <div class="panel-heading">
+            <h3>Последние выдачи</h3>
+
+            <a href="{{ url_for('loans') }}" class="panel-link">
+                Все выдачи →
+            </a>
+        </div>
+
+        {% if recent_loans %}
+
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Книга</th>
+                        <th>Читатель</th>
+                        <th>Дата выдачи</th>
+                        <th>Статус</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {% for loan in recent_loans %}
+                    <tr>
+                        <td>{{ loan.book.title }}</td>
+                        <td>{{ loan.reader.full_name }}</td>
+
+                        <td>
+                            {{ loan.issue_date.strftime('%d.%m.%Y') }}
+                        </td>
+
+                        <td>
+                            {% if loan.return_date %}
+                                <span class="overdue-label"
+                                      style="background:#E8F4EE;color:#39846B;">
+                                    Возвращена
+                                </span>
+
+                            {% elif loan.due_date < today %}
+                                <span class="overdue-label">
+                                    Просрочена
+                                </span>
+
+                            {% else %}
+                                <span class="overdue-label"
+                                      style="background:#EAF2F8;color:#477CA5;">
+                                    На руках
+                                </span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% else %}
+
+            <div class="empty-state">
+                Пока нет оформленных выдач.
+            </div>
+
+        {% endif %}
+
+    </section>
+
+
+    <!-- Просроченные выдачи -->
+
+    <section class="dashboard-panel">
+
+        <div class="panel-heading">
+            <h3>Требуют внимания</h3>
+
+            <a href="{{ url_for('loans') }}" class="panel-link">
+                Все выдачи →
+            </a>
+        </div>
+
+        {% if overdue_loans %}
+
+            {% for loan in overdue_loans %}
+
+            <div class="overdue-item">
+
+                <strong>{{ loan.book.title }}</strong>
+
+                <span>
+                    Читатель: {{ loan.reader.full_name }}
+                </span>
+
+                <span>
+                    Срок возврата:
+                    {{ loan.due_date.strftime('%d.%m.%Y') }}
+                </span>
+
+                <div class="overdue-label">
+                    Просрочена
+                </div>
+
+            </div>
+
+            {% endfor %}
+
+        {% else %}
+
+            <div class="empty-state">
+                <div style="font-size:30px;">✓</div>
+                Просроченных выдач нет.
+            </div>
+
+        {% endif %}
+
+    </section>
+
+</div>
+
+
+<!-- Дополнительная навигация -->
+
+<div style="margin-top:25px;text-align:right;">
+
+    <a href="{{ url_for('statistics') }}" class="button">
+        Подробная статистика →
+    </a>
+
+</div>
+
+{% endblock %}

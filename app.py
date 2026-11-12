@@ -24,7 +24,48 @@ db.init_app(app)
 # Главная страница
 @app.route('/')
 def index():
-    return render_template('index.html')
+    today = date.today()
+
+    # Основные показатели
+    total_books = Book.query.count()
+    total_readers = Reader.query.count()
+
+    all_books = Book.query.all()
+    total_copies = sum(book.quantity for book in all_books)
+
+    active_loans = Loan.query.filter_by(
+        return_date=None
+    ).all()
+
+    issued_copies = len(active_loans)
+    available_copies = total_copies - issued_copies
+
+    # Просроченные выдачи
+    overdue_loans = [
+        loan for loan in active_loans
+        if loan.due_date < today
+    ]
+
+    # Последние выдачи
+    recent_loans = Loan.query.order_by(
+        Loan.issue_date.desc(),
+        Loan.id.desc()
+    ).limit(5).all()
+
+    return render_template(
+        'index.html',
+        total_books=total_books,
+        total_readers=total_readers,
+        total_copies=total_copies,
+        issued_copies=issued_copies,
+        available_copies=available_copies,
+        active_loans=len(active_loans),
+        overdue_loans=overdue_loans,
+        overdue_count=len(overdue_loans),
+        recent_loans=recent_loans,
+        today=today
+    )
+
 
 
 # Список читателей
