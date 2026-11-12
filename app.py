@@ -9,6 +9,7 @@ from database import db
 from models import Author, Book, Reader, Loan
 
 
+
 app = Flask(__name__, instance_relative_config=True)
 
 os.makedirs(app.instance_path, exist_ok=True)
@@ -107,9 +108,21 @@ def delete_reader(reader_id):
 
 
 # Список книг
+
 @app.route('/books')
 def books():
+    search = request.args.get('search', '').strip().casefold().replace('ё', 'е')
+
     all_books = Book.query.order_by(Book.title).all()
+
+    # Поиск без учёта регистра, включая кириллицу
+    if search:
+        all_books = [
+            book for book in all_books
+            if search in book.title.casefold().replace('ё', 'е')
+               or search in book.author.full_name.casefold().replace('ё', 'е')
+               or search in (book.isbn or '').casefold().replace('ё', 'е')
+        ]
 
     books_data = []
 
@@ -125,7 +138,13 @@ def books():
             'available': book.quantity - issued
         })
 
-    return render_template('books.html', books=books_data)
+    return render_template(
+        'books.html',
+        books=books_data,
+        search=request.args.get('search', '').strip()
+    )
+
+
 
 
 # Добавление книги

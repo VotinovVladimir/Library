@@ -13,6 +13,25 @@
         Добавить книгу
     </a>
 
+    <form method="GET" action="{{ url_for('books') }}">
+    <input
+        type="text"
+        name="search"
+        placeholder="Название, автор или ISBN"
+        value="{{ search }}"
+    >
+
+    <button type="submit" class="button">
+        Найти
+    </button>
+
+    {% if search %}
+        <a href="{{ url_for('books') }}" class="button">
+            Сбросить
+        </a>
+    {% endif %}
+</form>
+
     {% if books %}
 
     <table>
@@ -74,9 +93,13 @@
 
     {% else %}
 
+    {% if search %}
+        <p>По запросу «{{ search }}» книги не найдены.</p>
+    {% else %}
         <p>В каталоге пока нет книг.</p>
-
     {% endif %}
+
+{% endif %}
 
 </div>
 
