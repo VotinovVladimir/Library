@@ -13,6 +13,25 @@
         Добавить читателя
     </a>
 
+    <form method="GET" action="{{ url_for('readers') }}">
+    <input
+        type="text"
+        name="search"
+        placeholder="Введите ФИО читателя"
+        value="{{ search }}"
+    >
+
+    <button type="submit" class="button">
+        Найти
+    </button>
+
+    {% if search %}
+        <a href="{{ url_for('readers') }}" class="button">
+            Сбросить
+        </a>
+    {% endif %}
+</form>
+
     {% if readers %}
 
     <table>
@@ -65,9 +84,13 @@
 
     {% else %}
 
+    {% if search %}
+        <p>По запросу «{{ search }}» читатели не найдены.</p>
+    {% else %}
         <p>В базе данных пока нет читателей.</p>
-
     {% endif %}
+
+{% endif %}
 
 </div>
 

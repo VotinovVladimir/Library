@@ -1,0 +1,60 @@
+
+{% extends 'base.html' %}
+
+{% block title %}Статистика — Библиотека{% endblock %}
+
+{% block content %}
+
+<div class="container">
+
+    <h2>Статистика библиотеки</h2>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Показатель</th>
+                <th>Количество</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            <tr>
+                <td>Наименований книг</td>
+                <td>{{ total_books }}</td>
+            </tr>
+
+            <tr>
+                <td>Всего экземпляров</td>
+                <td>{{ total_copies }}</td>
+            </tr>
+
+            <tr>
+                <td>Свободных экземпляров</td>
+                <td>{{ available_copies }}</td>
+            </tr>
+
+            <tr>
+                <td>Книг на руках</td>
+                <td>{{ issued_copies }}</td>
+            </tr>
+
+            <tr>
+                <td>Всего читателей</td>
+                <td>{{ total_readers }}</td>
+            </tr>
+
+            <tr>
+                <td>Активных выдач</td>
+                <td>{{ active_loans }}</td>
+            </tr>
+
+            <tr>
+                <td>Просроченных выдач</td>
+                <td>{{ overdue_loans }}</td>
+            </tr>
+        </tbody>
+    </table>
+
+</div>
+
+{% endblock %}

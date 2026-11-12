@@ -28,10 +28,28 @@ def index():
 
 
 # Список читателей
+
+# Список читателей
 @app.route('/readers')
 def readers():
+    search = request.args.get('search', '').strip()
+
     all_readers = Reader.query.order_by(Reader.full_name).all()
-    return render_template('readers.html', readers=all_readers)
+
+    if search:
+        search_normalized = search.casefold().replace('ё', 'е')
+
+        all_readers = [
+            reader for reader in all_readers
+            if search_normalized in reader.full_name.casefold().replace('ё', 'е')
+        ]
+
+    return render_template(
+        'readers.html',
+        readers=all_readers,
+        search=search
+    )
+
 
 
 # Добавление читателя
@@ -439,6 +457,53 @@ def return_loan(loan_id):
         flash('Возврат книги успешно зарегистрирован.', 'success')
 
     return redirect(url_for('loans'))
+
+
+
+
+# Статистика библиотеки
+@app.route('/statistics')
+def statistics():
+    today = date.today()
+
+    # Количество наименований книг
+    total_books = Book.query.count()
+
+    # Общее количество физических экземпляров
+    total_copies = sum(
+        book.quantity for book in Book.query.all()
+    )
+
+    # Все активные выдачи
+    active_loans = Loan.query.filter_by(
+        return_date=None
+    ).all()
+
+    # Количество книг на руках
+    issued_copies = len(active_loans)
+
+    # Количество свободных экземпляров
+    available_copies = total_copies - issued_copies
+
+    # Количество просроченных выдач
+    overdue_loans = sum(
+        1 for loan in active_loans
+        if loan.due_date < today
+    )
+
+    # Количество читателей
+    total_readers = Reader.query.count()
+
+    return render_template(
+        'statistics.html',
+        total_books=total_books,
+        total_copies=total_copies,
+        available_copies=available_copies,
+        issued_copies=issued_copies,
+        total_readers=total_readers,
+        active_loans=issued_copies,
+        overdue_loans=overdue_loans
+    )
 
 
 # Создание таблиц
