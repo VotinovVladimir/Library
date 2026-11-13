@@ -1,0 +1,44 @@
+.pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    margin-top: 20px;
+    flex-wrap: wrap;
+}
+
+.pagination-info {
+    margin-top: 15px;
+    color: #666;
+    font-size: 14px;
+}
+
+.pagination .active-page {
+    background: #244B68;
+    color: white;
+    border-color: #244B68;
+    pointer-events: none;
+}
+
+/* Пагинация */
+
+.pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    margin: 25px 0 10px;
+    flex-wrap: wrap;
+}
+
+.pagination a {
+    min-width: 40px;
+    padding: 9px 13px;
+    text-align: center;
+}
+
+.pagination .active-page {
+    background: var(--navy);
+    color: white;
+    pointer-events: none;
+}

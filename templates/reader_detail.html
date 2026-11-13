@@ -1,0 +1,85 @@
+
+{% extends 'base.html' %}
+
+{% block title %}Карточка читателя — Библиотека{% endblock %}
+
+{% block content %}
+
+<div class="container">
+
+    <h2>Карточка читателя</h2>
+
+    <p><strong>ФИО:</strong> {{ reader.full_name }}</p>
+    <p><strong>Телефон:</strong> {{ reader.phone or '—' }}</p>
+    <p><strong>Email:</strong> {{ reader.email or '—' }}</p>
+    <p>
+        <strong>Дата регистрации:</strong>
+        {{ reader.registration_date.strftime('%d.%m.%Y') }}
+    </p>
+
+    <h3>Статистика</h3>
+
+    <div class="stats">
+        <p><strong>Всего выдач:</strong> {{ total_loans }}</p>
+        <p><strong>Книг на руках:</strong> {{ active_count }}</p>
+        <p><strong>Просрочено:</strong> {{ overdue_count }}</p>
+    </div>
+
+    <h3>История выдач</h3>
+
+    {% if loans %}
+
+    <table>
+        <thead>
+            <tr>
+                <th>Книга</th>
+                <th>Дата выдачи</th>
+                <th>Срок возврата</th>
+                <th>Дата возврата</th>
+                <th>Статус</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            {% for loan in loans %}
+            <tr>
+                <td>{{ loan.book.title }}</td>
+                <td>{{ loan.issue_date.strftime('%d.%m.%Y') }}</td>
+                <td>{{ loan.due_date.strftime('%d.%m.%Y') }}</td>
+                <td>
+                    {{ loan.return_date.strftime('%d.%m.%Y') if loan.return_date else '—' }}
+                </td>
+                <td>
+                    {% if loan.return_date %}
+                        Возвращена
+                    {% elif loan.due_date < today %}
+                        Просрочена
+                    {% else %}
+                        На руках
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    {% else %}
+
+    <p>У этого читателя пока нет истории выдач.</p>
+
+    {% endif %}
+
+    <div class="actions">
+        <a href="{{ url_for('edit_reader', reader_id=reader.id) }}"
+           class="button">
+            Изменить данные
+        </a>
+
+        <a href="{{ url_for('readers') }}" class="button">
+            Назад к читателям
+        </a>
+    </div>
+
+</div>
+
+{% endblock %}

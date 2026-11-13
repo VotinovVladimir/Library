@@ -1,4 +1,3 @@
-
 import os
 
 from datetime import date, timedelta
@@ -7,8 +6,6 @@ from flask import Flask, render_template, request, redirect, url_for, flash
 
 from database import db
 from models import Author, Book, Reader, Loan
-
-
 
 app = Flask(__name__, instance_relative_config=True)
 
@@ -67,30 +64,80 @@ def index():
     )
 
 
-
 # Список читателей
 
 # Список читателей
 @app.route('/readers')
 def readers():
-    search = request.args.get('search', '').strip()
+    search_text = request.args.get('search', '').strip()
+    search = search_text.casefold().replace('ё', 'е')
 
     all_readers = Reader.query.order_by(Reader.full_name).all()
 
+    # Поиск без учёта регистра, включая кириллицу
     if search:
-        search_normalized = search.casefold().replace('ё', 'е')
-
         all_readers = [
             reader for reader in all_readers
-            if search_normalized in reader.full_name.casefold().replace('ё', 'е')
+            if search in reader.full_name.casefold().replace('ё', 'е')
         ]
+
+    # Пагинация: 10 читателей на странице
+    per_page = 10
+    page = request.args.get('page', 1, type=int)
+
+    total_readers = len(all_readers)
+    total_pages = max(1, (total_readers + per_page - 1) // per_page)
+
+    page = max(1, min(page, total_pages))
+
+    start = (page - 1) * per_page
+    page_readers = all_readers[start:start + per_page]
 
     return render_template(
         'readers.html',
-        readers=all_readers,
-        search=search
+        readers=page_readers,
+        search=search_text,
+        page=page,
+        total_pages=total_pages,
+        total_readers=total_readers
     )
 
+
+@app.route('/readers/<int:reader_id>')
+def reader_detail(reader_id):
+    reader = db.get_or_404(Reader, reader_id)
+
+    today = date.today()
+
+    # История выдач читателя
+    loans = sorted(
+        reader.loans,
+        key=lambda loan: loan.issue_date,
+        reverse=True
+    )
+
+    # Статистика
+    total_loans = len(loans)
+
+    active_loans = [
+        loan for loan in loans
+        if loan.return_date is None
+    ]
+
+    overdue_loans = [
+        loan for loan in active_loans
+        if loan.due_date < today
+    ]
+
+    return render_template(
+        'reader_detail.html',
+        reader=reader,
+        loans=loans,
+        total_loans=total_loans,
+        active_count=len(active_loans),
+        overdue_count=len(overdue_loans),
+        today=today
+    )
 
 
 # Добавление читателя
@@ -168,9 +215,11 @@ def delete_reader(reader_id):
 
 # Список книг
 
+
 @app.route('/books')
 def books():
-    search = request.args.get('search', '').strip().casefold().replace('ё', 'е')
+    search_text = request.args.get('search', '').strip()
+    search = search_text.casefold().replace('ё', 'е')
 
     all_books = Book.query.order_by(Book.title).all()
 
@@ -183,9 +232,21 @@ def books():
                or search in (book.isbn or '').casefold().replace('ё', 'е')
         ]
 
+    # Пагинация: 10 книг на странице
+    per_page = 10
+    page = request.args.get('page', 1, type=int)
+
+    total_books = len(all_books)
+    total_pages = max(1, (total_books + per_page - 1) // per_page)
+
+    page = max(1, min(page, total_pages))
+
+    start = (page - 1) * per_page
+    page_books = all_books[start:start + per_page]
+
     books_data = []
 
-    for book in all_books:
+    for book in page_books:
         issued = sum(
             1 for loan in book.loans
             if loan.return_date is None
@@ -200,10 +261,11 @@ def books():
     return render_template(
         'books.html',
         books=books_data,
-        search=request.args.get('search', '').strip()
+        search=search_text,
+        page=page,
+        total_pages=total_pages,
+        total_books=total_books
     )
-
-
 
 
 # Добавление книги
@@ -374,17 +436,66 @@ def delete_book(book_id):
 # Список выдач и история возвратов
 @app.route('/loans')
 def loans():
+    today = date.today()
+
+    search_text = request.args.get('search', '').strip()
+    search = search_text.casefold().replace('ё', 'е')
+
+    status = request.args.get('status', 'all')
+
     all_loans = Loan.query.order_by(
         Loan.issue_date.desc(),
         Loan.id.desc()
     ).all()
 
-    today = date.today()
+    # Поиск по названию книги и ФИО читателя
+    if search:
+        all_loans = [
+            loan for loan in all_loans
+            if search in loan.book.title.casefold().replace('ё', 'е')
+               or search in loan.reader.full_name.casefold().replace('ё', 'е')
+        ]
+
+    # Фильтрация по статусу
+    if status == 'active':
+        all_loans = [
+            loan for loan in all_loans
+            if loan.return_date is None and loan.due_date >= today
+        ]
+
+    elif status == 'overdue':
+        all_loans = [
+            loan for loan in all_loans
+            if loan.return_date is None and loan.due_date < today
+        ]
+
+    elif status == 'returned':
+        all_loans = [
+            loan for loan in all_loans
+            if loan.return_date is not None
+        ]
+
+    # Пагинация: 10 выдач на странице
+    per_page = 10
+    page = request.args.get('page', 1, type=int)
+
+    total_loans = len(all_loans)
+    total_pages = max(1, (total_loans + per_page - 1) // per_page)
+
+    page = max(1, min(page, total_pages))
+
+    start = (page - 1) * per_page
+    page_loans = all_loans[start:start + per_page]
 
     return render_template(
         'loans.html',
-        loans=all_loans,
-        today=today
+        loans=page_loans,
+        today=today,
+        page=page,
+        total_pages=total_pages,
+        total_loans=total_loans,
+        search=search_text,
+        status=status
     )
 
 
@@ -500,6 +611,19 @@ def return_loan(loan_id):
     return redirect(url_for('loans'))
 
 
+@app.route('/loans/extend/<int:loan_id>', methods=['POST'])
+def extend_loan(loan_id):
+    loan = db.get_or_404(Loan, loan_id)
+
+    if loan.return_date is not None:
+        flash('Нельзя продлить уже возвращённую книгу.', 'error')
+    else:
+        loan.due_date = loan.due_date + timedelta(days=14)
+        db.session.commit()
+
+        flash('Срок возврата продлён на 14 дней.', 'success')
+
+    return redirect(url_for('loans'))
 
 
 # Статистика библиотеки
@@ -550,7 +674,6 @@ def statistics():
 # Создание таблиц
 with app.app_context():
     db.create_all()
-
 
 if __name__ == '__main__':
     app.run(debug=True)

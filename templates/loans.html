@@ -1,4 +1,3 @@
-
 {% extends 'base.html' %}
 
 {% block title %}Выдачи книг — Библиотека{% endblock %}
@@ -13,76 +12,158 @@
         Выдать книгу
     </a>
 
+    <form method="GET" action="{{ url_for('loans') }}" class="search-form">
+
+        <input
+                type="text"
+                name="search"
+                placeholder="Название книги или ФИО читателя"
+                value="{{ search }}"
+        >
+
+        <select name="status">
+            <option value="all" {% if status==
+            'all' %}selected{% endif %}>
+            Все выдачи
+            </option>
+
+            <option value="active" {% if status==
+            'active' %}selected{% endif %}>
+            На руках
+            </option>
+
+            <option value="overdue" {% if status==
+            'overdue' %}selected{% endif %}>
+            Просрочены
+            </option>
+
+            <option value="returned" {% if status==
+            'returned' %}selected{% endif %}>
+            Возвращены
+            </option>
+        </select>
+
+        <button type="submit" class="button">
+            Найти
+        </button>
+
+        {% if search or status != 'all' %}
+        <a href="{{ url_for('loans') }}" class="button">
+            Сбросить
+        </a>
+        {% endif %}
+
+    </form>
+
     {% if loans %}
 
     <table>
         <thead>
-            <tr>
-                <th>ID</th>
-                <th>Книга</th>
-                <th>Читатель</th>
-                <th>Дата выдачи</th>
-                <th>Вернуть до</th>
-                <th>Дата возврата</th>
-                <th>Статус</th>
-                <th>Действие</th>
-            </tr>
+        <tr>
+
+            <th>Книга</th>
+            <th>Читатель</th>
+            <th>Дата выдачи</th>
+            <th>Вернуть до</th>
+            <th>Дата возврата</th>
+            <th>Статус</th>
+            <th>Действие</th>
+        </tr>
         </thead>
 
         <tbody>
-            {% for loan in loans %}
+        {% for loan in loans %}
 
-            <tr>
-                <td>{{ loan.id }}</td>
-                <td>{{ loan.book.title }}</td>
-                <td>{{ loan.reader.full_name }}</td>
+        <tr>
 
-                <td>{{ loan.issue_date.strftime('%d.%m.%Y') }}</td>
+            <td>{{ loan.book.title }}</td>
+            <td>{{ loan.reader.full_name }}</td>
 
-                <td>{{ loan.due_date.strftime('%d.%m.%Y') }}</td>
+            <td>{{ loan.issue_date.strftime('%d.%m.%Y') }}</td>
 
-                <td>
-                    {% if loan.return_date %}
-                        {{ loan.return_date.strftime('%d.%m.%Y') }}
-                    {% else %}
-                        —
-                    {% endif %}
-                </td>
+            <td>{{ loan.due_date.strftime('%d.%m.%Y') }}</td>
 
-                <td>
-                    {% if loan.return_date %}
-                        <span class="success">Возвращена</span>
-                    {% elif loan.due_date < today %}
-                        <span class="error">Просрочена</span>
-                    {% else %}
-                        <span>На руках</span>
-                    {% endif %}
-                </td>
+            <td>
+                {% if loan.return_date %}
+                {{ loan.return_date.strftime('%d.%m.%Y') }}
+                {% else %}
+                —
+                {% endif %}
+            </td>
 
-                <td>
-                    {% if not loan.return_date %}
-                        <form
-                            action="{{ url_for('return_loan', loan_id=loan.id) }}"
-                            method="POST"
-                            onsubmit="return confirm('Зарегистрировать возврат книги?');"
-                        >
-                            <button type="submit">
-                                Вернуть
-                            </button>
-                        </form>
-                    {% else %}
-                        —
-                    {% endif %}
-                </td>
-            </tr>
+            <td>
+                {% if loan.return_date %}
+                <span class="success">Возвращена</span>
+                {% elif loan.due_date < today %}
+                <span class="error">Просрочена</span>
+                {% else %}
+                <span>На руках</span>
+                {% endif %}
+            </td>
 
-            {% endfor %}
+            <td>
+    {% if not loan.return_date %}
+    <div class="actions">
+        <form
+            action="{{ url_for('return_loan', loan_id=loan.id) }}"
+            method="POST"
+            onsubmit="return confirm('Зарегистрировать возврат книги?');"
+        >
+            <button type="submit">
+                Вернуть
+            </button>
+        </form>
+
+        <form
+            action="{{ url_for('extend_loan', loan_id=loan.id) }}"
+            method="POST"
+            onsubmit="return confirm('Продлить срок возврата на 14 дней?');"
+        >
+            <button type="submit">
+                Продлить
+            </button>
+        </form>
+    </div>
+    {% else %}
+    —
+    {% endif %}
+</td>
+        </tr>
+
+        {% endfor %}
         </tbody>
     </table>
 
+    {% if total_pages > 1 %}
+    <div class="pagination">
+
+        {% if page > 1 %}
+        <a href="{{ url_for('loans', page=page-1, search=search, status=status) }}"
+           class="button">
+            Назад
+        </a>
+        {% endif %}
+
+        {% for page_num in range(1, total_pages + 1) %}
+        <a href="{{ url_for('loans', page=page_num, search=search, status=status) }}"
+           class="button {% if page_num == page %}active-page{% endif %}">
+            {{ page_num }}
+        </a>
+        {% endfor %}
+
+        {% if page < total_pages %}
+        <a href="{{ url_for('loans', page=page+1, search=search, status=status) }}"
+           class="button">
+            Вперёд
+        </a>
+        {% endif %}
+
+    </div>
+    {% endif %}
+
     {% else %}
 
-        <p>Выдач пока нет.</p>
+    <p>Выдач пока нет.</p>
 
     {% endif %}
 
