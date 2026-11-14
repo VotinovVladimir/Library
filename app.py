@@ -631,33 +631,79 @@ def extend_loan(loan_id):
 def statistics():
     today = date.today()
 
-    # Количество наименований книг
-    total_books = Book.query.count()
+    # Количество наименований и физических экземпляров
+    books = Book.query.all()
+    total_books = len(books)
+    total_copies = sum(book.quantity for book in books)
 
-    # Общее количество физических экземпляров
-    total_copies = sum(
-        book.quantity for book in Book.query.all()
-    )
+    # Все выдачи
+    loans = Loan.query.all()
+    total_loans = len(loans)
 
-    # Все активные выдачи
-    active_loans = Loan.query.filter_by(
-        return_date=None
-    ).all()
+    # Разделяем выдачи по статусам
+    returned_loans = [
+        loan for loan in loans
+        if loan.return_date is not None
+    ]
 
-    # Количество книг на руках
-    issued_copies = len(active_loans)
+    active_loans = [
+        loan for loan in loans
+        if loan.return_date is None
+    ]
 
-    # Количество свободных экземпляров
-    available_copies = total_copies - issued_copies
-
-    # Количество просроченных выдач
-    overdue_loans = sum(
-        1 for loan in active_loans
+    overdue_loans = [
+        loan for loan in active_loans
         if loan.due_date < today
-    )
+    ]
 
-    # Количество читателей
+    current_loans = [
+        loan for loan in active_loans
+        if loan.due_date >= today
+    ]
+
+    issued_copies = len(active_loans)
+    available_copies = total_copies - issued_copies
     total_readers = Reader.query.count()
+
+    # Топ-5 популярных книг
+    book_counts = {}
+
+    for loan in loans:
+        title = loan.book.title
+        book_counts[title] = book_counts.get(title, 0) + 1
+
+    popular_books = sorted(
+        book_counts.items(),
+        key=lambda item: item[1],
+        reverse=True
+    )[:5]
+
+    popular_labels = [item[0] for item in popular_books]
+    popular_values = [item[1] for item in popular_books]
+
+    # Динамика выдач за последние 6 месяцев
+    month_labels = []
+    month_values = []
+
+    for offset in range(5, -1, -1):
+        month = today.month - offset
+        year = today.year
+
+        while month <= 0:
+            month += 12
+            year -= 1
+
+        month_labels.append(
+            date(year, month, 1).strftime('%m.%Y')
+        )
+
+        count = sum(
+            1 for loan in loans
+            if loan.issue_date.year == year
+            and loan.issue_date.month == month
+        )
+
+        month_values.append(count)
 
     return render_template(
         'statistics.html',
@@ -666,10 +712,15 @@ def statistics():
         available_copies=available_copies,
         issued_copies=issued_copies,
         total_readers=total_readers,
-        active_loans=issued_copies,
-        overdue_loans=overdue_loans
+        active_loans=len(current_loans),
+        overdue_loans=len(overdue_loans),
+        returned_loans=len(returned_loans),
+        total_loans=total_loans,
+        popular_labels=popular_labels,
+        popular_values=popular_values,
+        month_labels=month_labels,
+        month_values=month_values
     )
-
 
 # Создание таблиц
 with app.app_context():
