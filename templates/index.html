@@ -142,8 +142,7 @@
 
                         <td>
                             {% if loan.return_date %}
-                                <span class="overdue-label"
-                                      style="background:#E8F4EE;color:#39846B;">
+                                <span class="overdue-label status-returned">
                                     Возвращена
                                 </span>
 
@@ -153,8 +152,7 @@
                                 </span>
 
                             {% else %}
-                                <span class="overdue-label"
-                                      style="background:#EAF2F8;color:#477CA5;">
+                                <span class="overdue-label status-on-hand">
                                     На руках
                                 </span>
                             {% endif %}
@@ -216,7 +214,7 @@
         {% else %}
 
             <div class="empty-state">
-                <div style="font-size:30px;">✓</div>
+                <div class="empty-state-icon">✓</div>
                 Просроченных выдач нет.
             </div>
 
@@ -229,7 +227,7 @@
 
 <!-- Дополнительная навигация -->
 
-<div style="margin-top:25px;text-align:right;">
+<div class="dashboard-footer">
 
     <a href="{{ url_for('statistics') }}" class="button">
         Подробная статистика →
